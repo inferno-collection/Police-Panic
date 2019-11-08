@@ -1,5 +1,5 @@
 ![channels4_banner|690x114](https://i.ibb.co/CHMD8y6/channels4-banner.jpg) 
-# Inferno Collection: Pass Alarm
+# Inferno Collection: Police Panic
 [![Build Status](https://travis-ci.com/inferno-collection/Police-Panic.svg?branch=master)](https://travis-ci.com/inferno-collection/Police-Panic)
 
 __Public Beta Version 1.2 Beta__
