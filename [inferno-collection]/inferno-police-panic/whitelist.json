@@ -1,0 +1,8 @@
+[
+	{
+		"steamhex"		:	"steam:1100001076264E1",
+		"panic"			:	true,
+		"panictune"		:	true,
+		"panicwhitelist": 	true
+	}
+]
