@@ -1,4 +1,4 @@
--- Inferno Collection Police Panic Version 1.2 Beta
+-- Inferno Collection Police Panic Version 1.21 Beta
 --
 -- Copyright (c) 2019, Christopher M, Inferno Collection. All rights reserved.
 --
@@ -15,17 +15,36 @@
 local Config = {} -- Do not edit this line
 -- Time in secs between Panic Button activates PER client
 -- Set to 0 to impose no cooldown
-Config.Cooldown = 5
+Config.Cooldown = 15
+-- Time in secs blip flashes and map route appears on tuned
+-- clients screens before disappearing
+Config.BlipTime = 30
 -- Whether or not to disable all on-screen messages
 Config.DisableAllMessages = false
 -- Whether or not to enable chat suggestions
 Config.ChatSuggestions = true
 -- Whether or not to enable a reminder for whitelisted people to tune into the
 -- panic channel after they join the server, if they have not done so already
-Config.Reminder = true
+Config.Reminder = false
+-- Whether or not to enable auto-tuning based off of whitelist entries
+-- A.K.A, if a client is whitelisted and has 'autotune' set to true,
+-- whether or not to allow this client to be auto-tuned
+Config.WhitelistAutoTune = true
+-- Whether or not to enable auto-tuning based off of what vehicle a client is in
+-- DO NOT have 'WhitelistAutoTune' enabled at the same time as this, use one or the other
+Config.VehicleAutoTune = false
+-- The model name of the vehicles that will auto-tune a player if
+-- 'VehicleAutoTune' is enabled
+Config.AutoTuneVehicles = {
+	"police",
+	"police1",
+	"police2",
+	"police3",
+	"police4"
+}
 -- Whether or not to enable command whitelist.
 -- "ace" to use Ace permissions, "json" to use whitelist.json file, or false to disable.
-Config.WhitelistEnabled = false
+Config.WhitelistEnabled = "json"
 -- Default message displayed with panic activation
 Config.Message = "Attention all units, Officer in distress!"
 
@@ -50,6 +69,7 @@ Whitelist.Command = {}
 Whitelist.Command.panic = false
 Whitelist.Command.panictune = false
 Whitelist.Command.panicwhitelist = false
+Whitelist.Command.autotune = false
 
 -- Placed here so if the resource is restarted, whitelisting does not break
 AddEventHandler("onClientResourceStart", function (ResourceName)
@@ -64,6 +84,8 @@ AddEventHandler("onClientResourceStart", function (ResourceName)
 			end
 			-- Override whitelist permission
 			Whitelist.Command.panicwhitelist = false
+			-- Override auto-tune permission
+			Whitelist.Command.autotune = false
 		end
 	end
 end)
@@ -71,25 +93,15 @@ end)
 -- On client join server
 AddEventHandler("onClientMapStart", function()
 	if Config.ChatSuggestions then
-
 		TriggerEvent("chat:addSuggestion", "/panic", "Activate your Panic Button!")
 		TriggerEvent("chat:addSuggestion", "/panictune", "Tune into the Panic Button channel.")
 		TriggerEvent("chat:addSuggestion", "/panicwhitelist", "Add to, and/or reload the command whitelist.", {
 			{ name = "{reload} or {player hex/server id}", help = "Type 'reload' to reload the current whitelist, or if you are adding to the whitelist, type out the player's steam hex, or put the player's server ID from the player list." },
 			{ name = "commands", help = "List all the commands you want this person to have access to."}
 		})
-	end
-
-	if Whitelist.Enabled then
-		TriggerServerEvent("Police-Panic:WhitelistCheck", Whitelist)
-	else
-		-- Loop through all commands
-		for i in pairs(Whitelist.Command) do
-			-- Grant players all permissions
-			Whitelist.Command[i] = true
-		end
-		-- Override whitelist permission
-		Whitelist.Command.panicwhitelist = false
+		TriggerEvent("chat:addSuggestion", "/panicunwhitelist", "Remove players from the command whitelist.", {
+			{ name = "{player hex/server id}", help = "Type out the player's steam hex, or put the player's server ID from the player list." }
+		})
 	end
 
 	-- Adds panic command chat template, including radio icon
@@ -101,7 +113,10 @@ RegisterNetEvent("Police-Panic:Return:WhitelistCheck")
 AddEventHandler("Police-Panic:Return:WhitelistCheck", function(NewWhitelist)
 	Whitelist = NewWhitelist
 
-	if Config.Reminder and Whitelist.Command.panictune then
+	if Whitelist.Command.autotune and Config.WhitelistAutoTune then
+		Citizen.Wait(5000)
+		PanicTune(true)
+	elseif Config.Reminder and Whitelist.Command.panictune then
 		Citizen.CreateThread(function()
 			-- Wait two minutes after they join the server
 			Citizen.Wait(120000)
@@ -116,6 +131,16 @@ end)
 RegisterNetEvent("Police-Panic:WhitelistRecheck")
 AddEventHandler("Police-Panic:WhitelistRecheck", function()
 	TriggerServerEvent("Police-Panic:WhitelistCheck", Whitelist)
+end)
+
+-- Message return when removing clients from the whitelist
+RegisterNetEvent("Police-Panic:Return:WhitelistRemove")
+AddEventHandler("Police-Panic:Return:WhitelistRemove", function(Removed)
+	if Removed then
+		NewNoti("~g~Entry removed from whitelist.", true)
+	else
+		NewNoti("~r~No entry with provided ID found. Unable to remove.", true)
+	end
 end)
 
 -- /panic command
@@ -183,7 +208,9 @@ AddEventHandler("Pass-Alarm:Return:NewPanic", function(source, Officer)
 			SetBlipAlpha(Blip, 60)
 			SetBlipFlashes(Blip, true)
 			SetBlipFlashInterval(Blip, 200)
-			Citizen.Wait(30000)
+
+			Citizen.Wait(Config.BlipTime * 1000)
+
 			RemoveBlip(Blip)
 			Blip = nil
 		end)
@@ -193,13 +220,7 @@ end)
 -- /panictune command
 RegisterCommand("panictune", function()
 	if Whitelist.Command.panictune then
-		if Panic.Tuned then
-			Panic.Tuned = false
-			NewNoti("~y~No longer tuned to Panic channel.", false)
-		else
-			Panic.Tuned = true
-			NewNoti("~y~Now tuned to Panic channel.", false)
-		end
+		PanicTune()
 	else
 		NewNoti("~r~You are not whitelisted for this command.", true)
 	end
@@ -217,6 +238,7 @@ RegisterCommand("panicwhitelist", function(Source, Args)
 			Entry.panic = "pending"
 			Entry.panictune = "pending"
 			Entry.panicwhitelist = "pending"
+			Entry.autotune = "pending"
 
 			if tonumber(Args[1]) then
 				ID = Args[1]
@@ -250,6 +272,7 @@ RegisterCommand("panicwhitelist", function(Source, Args)
 
 			TriggerServerEvent("Police-Panic:WhitelistAdd", ID, Entry)
 			NewNoti("~g~" .. ID .. " Added to whitelist successfully.", true)
+			NewNoti("~g~Whitelist reload complete.", true)
 		else
 			NewNoti("~r~Error, not enough arguments.", true)
 		end
@@ -257,6 +280,57 @@ RegisterCommand("panicwhitelist", function(Source, Args)
 		NewNoti("~r~You are not whitelisted for this command.", true)
 	end
 end)
+
+-- /panicwhitelist command
+RegisterCommand("panicunwhitelist", function(Source, Args)
+	if Whitelist.Command.panicwhitelist then
+		if Args[1] then
+			local ID
+
+			if tonumber(Args[1]) then
+				ID = Args[1]
+			-- If the first part of the string contains "steam:"
+			elseif string.sub(Args[1]:lower(), 1, string.len("steam:")) == "steam:" then
+				-- Set the steam hex to the string
+				ID = Args[1]
+			-- In all other cases
+			else
+				-- Set the steam hex to the string, adding "steam:" to the front
+				ID = "steam:" .. Args[1]
+			end
+
+			TriggerServerEvent("Police-Panic:WhitelistRemove", ID)
+			NewNoti("~g~Whitelist reload complete.", true)
+		else
+			NewNoti("~r~Error, not enough arguments.", true)
+		end
+	else
+		NewNoti("~r~You are not whitelisted for this command.", true)
+	end
+end)
+
+-- Tunes a player to the panic channel
+function PanicTune(AutoTune)
+	AutoTune = AutoTune or false
+
+	if Panic.Tuned then
+		Panic.Tuned = false
+
+		if AutoTune then
+			NewNoti("~y~Auto-tuning you OUT of the Panic Channel. Use /panictune to retune.", true)
+		else
+			NewNoti("~r~No longer tuned to panic channel.", false)
+		end
+	else
+		if AutoTune then
+			Panic.Tuned = "autotune"
+			NewNoti("~y~Auto-tuning you INTO the Panic Channel. Use /panictune to detune.", true)
+		else
+			Panic.Tuned = "command"
+			NewNoti("~g~Tuned to Panic Channel.", false)
+		end
+	end
+end
 
 -- Draws notification on client's screen
 function NewNoti(Text, Flash)
@@ -282,3 +356,40 @@ Citizen.CreateThread(function()
 		end
 	end
 end)
+
+-- If vehicle auto-tune is enabled
+if Config.VehicleAutoTune then
+	local Vehicle = false
+
+	Citizen.CreateThread(function()
+		-- Forever
+		while true do
+			Citizen.Wait(0)
+
+			local PlayerVehicle = GetVehiclePedIsIn(PlayerPedId(), false)
+
+			if PlayerVehicle ~= 0 then
+				if not Vehicle then
+					for _, Veh in ipairs(Config.AutoTuneVehicles) do
+						-- If the current player's vehicle is in the list of auto-tune vehicles
+						if GetEntityModel(PlayerVehicle) == GetHashKey(Veh) then
+							Vehicle = PlayerVehicle
+							if not Panic.Tuned then PanicTune(true) end
+							break
+						end
+
+						-- Player is not in an auto-tune vehicle, but this variable still
+						-- needs to be set to something
+						Vehicle = "No Vehicle"
+					end
+				elseif Vehicle ~= PlayerVehicle and Vehicle ~= "No Vehicle" then
+					Vehicle = false
+				end
+			else
+				Vehicle = false
+
+				if Panic.Tuned == "autotune" then PanicTune(true) end
+			end
+		end
+	end)
+end

@@ -1,4 +1,4 @@
--- Inferno Collection Police Panic Version 1.2 Beta
+-- Inferno Collection Police Panic Version 1.21 Beta
 --
 -- Copyright (c) 2019, Christopher M, Inferno Collection. All rights reserved.
 --
@@ -78,6 +78,8 @@ AddEventHandler("Police-Panic:WhitelistCheck", function(Whitelist)
 			end
 			-- Override whitelist permission
 			Whitelist.Command.panicwhitelist = false
+			-- Override auto-tune permission
+			Whitelist.Command.autotune = false
 		end
 
 		-- Loop through all commands
@@ -100,7 +102,7 @@ AddEventHandler("Police-Panic:WhitelistCheck", function(Whitelist)
 		-- Print error message to server console
 		print("===================================================================")
 		print("==============================WARNING==============================")
-		print("''" .. tostring(Whitelist.Enabled) .. "'' is not a valid Whitelist option.")
+		print("'" .. tostring(Whitelist.Enabled) .. "' is not a valid Whitelist option.")
 		print("The whitelist has been disabled.")
 		print("===================================================================")
 		-- Loop through all commands
@@ -110,6 +112,8 @@ AddEventHandler("Police-Panic:WhitelistCheck", function(Whitelist)
 		end
 		-- Override whitelist permission
 		Whitelist.Command.panicwhitelist = false
+		-- Override auto-tune permission
+		Whitelist.Command.autotune = false
 	end
 	-- Return whietlist object to client
 	TriggerClientEvent("Police-Panic:Return:WhitelistCheck", source, Whitelist)
@@ -142,4 +146,34 @@ AddEventHandler("Police-Panic:WhitelistAdd", function(ID, Entry)
 	SaveResourceFile(GetCurrentResourceName(), "whitelist.json", json.encode(Data), -1)
 	-- Force all clients to reload their whitelists
 	TriggerClientEvent("Police-Panic:WhitelistRecheck", -1)
+end)
+
+-- Remove entry from whitelist (json only)
+RegisterServerEvent("Police-Panic:WhitelistRemove")
+AddEventHandler("Police-Panic:WhitelistRemove", function(ID)
+	-- Collect all the data from the whitelist.json file
+	local Data = json.decode(LoadResourceFile(GetCurrentResourceName(), "whitelist.json"))
+	local Removed = false
+
+	-- If 'steam hex' provided was a number
+	if tonumber(ID) then
+		-- Get steam hex based off of number
+		ID = GetPlayerIdentifier(ID)
+	end
+
+	-- Loop through the whitelist array
+	for EntryID, Entry in ipairs(Data) do
+		-- Check if the player exists in the array.
+		if ID:lower() == Entry.steamhex:lower() then
+			Removed = EntryID
+		end
+	end
+
+	-- Remove the entry from the existing whitelist
+	table.remove(Data, Removed)
+	-- Covert the entire object to a json format, then save it over the existing file
+	SaveResourceFile(GetCurrentResourceName(), "whitelist.json", json.encode(Data), -1)
+	-- Force all clients to reload their whitelists
+	TriggerClientEvent("Police-Panic:WhitelistRecheck", -1)
+	TriggerClientEvent("Police-Panic:Return:WhitelistRemove", source, Removed)
 end)

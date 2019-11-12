@@ -1,8 +1,9 @@
 [
 	{
-		"steamhex"		:	"steam:1100001076264E1",
-		"panic"			:	true,
-		"panictune"		:	true,
-		"panicwhitelist": 	true
+		"steamhex"			:	"steam:1100001076264E1",
+		"panic"				:	true,
+		"panictune"			:	true,
+		"panicwhitelist"	: 	true,
+		"autotune"			:	true
 	}
 ]

@@ -2,13 +2,18 @@
 # Inferno Collection: Police Panic
 [![Build Status](https://travis-ci.com/inferno-collection/Police-Panic.svg?branch=master)](https://travis-ci.com/inferno-collection/Police-Panic)
 
-__Public Beta Version 1.2 Beta__
+__Public Beta Version 1.21 Beta__
 
 The Police Panic script is a simple Standalone script that allows Officers to tune into a "Panic Channel", which allows them to receive Panic Button activations, as well as activate their own Panic Button. Once a Panic Button is activated, all tuned Officers will hear an Emergency tone, followed by the name of the Officer, their nearest street and cross street, as well as a large flashing blip on their map, with a flashing map route; these will only display for a few seconds.
 
 Presently, the following can be customized:
 - Cooldown time between activations
 - Chat Messages
+- Amount of time blip and route show for
+- Toggleable reminder
+- Auto tuning
+    - Based off of whitelist OR
+    - Based off of vehicles
 - Toggleable notifications and chat suggestions
 - Which players can use which command (via a whitelist).
 - Choice of three whitelist options:

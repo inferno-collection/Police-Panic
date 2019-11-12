@@ -1,4 +1,4 @@
--- Inferno Collection Police Panic Version 1.2 Beta
+-- Inferno Collection Police Panic Version 1.21 Beta
 --
 -- Copyright (c) 2019, Christopher M, Inferno Collection. All rights reserved.
 --
