@@ -184,7 +184,7 @@ AddEventHandler("Pass-Alarm:Return:NewPanic", function(source, Officer)
 
 		-- Only people tuned to the panic channel can see the message
 		TriggerEvent("chat:addMessage", {
-			templateId = "Panic",
+			--templateId = "Panic",
 			color = {255, 0, 0},
 			multiline = true,
 			args = {"Dispatch", Config.Message .. " - " .. Officer.Name .. " (" .. source .. ") - " .. Officer.Location}
