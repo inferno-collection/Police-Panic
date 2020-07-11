@@ -1,7 +1,7 @@
 <!--
-Inferno Collection Police Panic Version 1.21 Beta
+Inferno Collection Police Panic Version 1.22 Beta
 
-Copyright (c) 2019, Christopher M, Inferno Collection. All rights reserved.
+Copyright (c) 2019 - 2020, Christopher M, Inferno Collection. All rights reserved.
 
 This project is licensed under the following:
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to use, copy, modify, and merge the software, under the following conditions:
@@ -10,9 +10,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 -->
 <html>
     <head>
-		<!-- Required file for FiveM -->
 		<script src="nui://game/ui/jquery.js" type="text/javascript"></script>
-		<!-- Make the NUI invisible -->
 		<style type="text/css">
 			html {
 				display: none;
@@ -22,17 +20,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <body>
 		<script type="text/javascript">
             $(function() {
-				var Panics = [];
+				let Panics = [];
 				window.addEventListener("message", function(event) {
-					if (event.data.PayloadType == "Panic") {
-						if (!Panics[event.data.Payload]) {
-							Panics[event.data.Payload] = new Audio("./sounds/panic.mp3");
-							Panics[event.data.Payload].volume = 0.35;
-							Panics[event.data.Payload].play();
-							Panics[event.data.Payload].addEventListener("ended",function(){
-								Panics[event.data.Payload] = null;
-							});
+					if (event.data.PayloadType[0] === "Panic" && !Panics[event.data.Payload]) {
+                        if (event.data.PayloadType[1] === "LocalPanic") {
+							Panics[event.data.Payload] = new Audio("./sounds/localpanic.ogg");
+						} else {
+							Panics[event.data.Payload] = new Audio("./sounds/externalpanic.ogg");
 						}
+
+                        Panics[event.data.Payload].play();
+                        Panics[event.data.Payload].addEventListener("ended", function(){
+                            Panics[event.data.Payload] = null;
+                        });
 					}
 				});
 			});
